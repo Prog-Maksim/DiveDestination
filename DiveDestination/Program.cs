@@ -15,8 +15,9 @@ List<PersonData> users = new List<PersonData>
 app.MapGet("/", () => "Welcome in Dive Destination");
 
 
-app.MapPost("/api/authorization/user", (string login, string password, HttpRequest request, HttpResponse response) =>
+app.MapPost("/api/authorization/user", (string login, string password, HttpRequest request, HttpResponse response, ILogger<Program> logger) =>
 {
+    logger.LogInformation($"вывзан endPoint для авторизации\n----------\nпереданные данные: \nлогин: {login} \nпароль:{password}");
     try
     {
         List<string> result = new List<string>();
@@ -56,8 +57,10 @@ app.MapPost("/api/authorization/user", (string login, string password, HttpReque
     }
 });
 
-app.MapPost("/api/registration/user", (string name, string login, string password, HttpRequest request, HttpResponse response) =>
+app.MapPost("/api/registration/user", (string name, string login, string password, HttpRequest request, HttpResponse response, ILogger<Program> logger) =>
 {
+    logger.LogInformation($"вывзан endPoint для регистрации \n----------\nпереданные данные: \nимя: {name} \nлогин: {login} \nпароль: {password}");
+    
     if (!request.Cookies.ContainsKey("personId"))
     {
         Random rnd = new Random();
