@@ -1,13 +1,33 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using DiveDestination;
 using DiveDestination.Scripts;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = AuthOptions.ISSUER,
+        ValidateAudience = true,
+        ValidAudience = AuthOptions.AUDIENCE,
+        ValidateLifetime = true,
+        IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
+        ValidateIssuerSigningKey = true
+    };
+});
 var app = builder.Build();
 
 List<PersonData> users = new List<PersonData> 
 { 
-    new() { Id = "usr_1", loginNumber = "81234567890", Name = "Григорьева", Age = 37, password = "asdgdhjt8@u4y5ved"},
+    new() { Id = "usr_1", loginEmail = "Grigorieva@gmail.com",loginNumber = "81234567890", Name = "Григорьева", Age = 37, password = "asdgdhjt8@u4y5ved"},
     new() { Id = "usr_2", loginEmail = "matvey_frontender@gmail.com", Name = "Матвей фронтендер", Age = 10, password = "asfaer67u5nktu("},
     new() { Id = "usr_3", loginEmail = "maksim_bekender@gmail.com", loginNumber = "80987654321", Name = "Максим Бекендер", Age = 24, password = "b9s9573@(74tnv"}
 };
@@ -20,12 +40,10 @@ app.MapPost("/api/authorization/user", (string login, string password, HttpReque
     logger.LogInformation($"вывзан endPoint для авторизации\n----------\nпереданные данные: \nлогин: {login} \nпароль:{password}");
     try
     {
-        List<string> result = new List<string>();
-
-        if (CheckData.checkCurrentNumberPhone(login))
-            result = GetDataPerson.getIdLoginPhoneNumber(users, login);
-        else if (CheckData.checkCurrentEmailAddress(login))
-            result = GetDataPerson.getIdLoginEmailAddress(users, login);
+        PersonData result = new PersonData();
+        
+        if (CheckData.checkCurrentEmailAddress(login))
+            result = GetDataPerson.getIdLoginEmailAddress(users, login, password);
         else
         {
             var problem = new ProblemDetails {
@@ -36,24 +54,35 @@ app.MapPost("/api/authorization/user", (string login, string password, HttpReque
 
             return Results.Problem(problem);
         }
-
-        if (result[1] == password)
+        
+        var claims = new List<Claim> {new Claim(ClaimTypes.Name, result.Name), new Claim(ClaimTypes.Email, result.loginEmail) };
+        // создаем JWT-токен
+        var jwt = new JwtSecurityToken(
+            issuer: AuthOptions.ISSUER,
+            audience: AuthOptions.AUDIENCE,
+            claims: claims,
+            expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
+            signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
+        var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
+        
+        var res = new
         {
-            response.Cookies.Append("personId", result[0]);
-            return Results.Text($"Вы успешно авторизовались, {result[2]}");
-        }
-
-        var problemDetails = new ProblemDetails {
-            Status = 403,
-            Title = "Forbidden",
-            Detail = "логин или пароль не верен!"
+            message = "вы успешно авторизовались",
+            access_token = encodedJwt,
+            email = result.loginEmail
         };
 
-        return Results.Problem(problemDetails);
+        return Results.Json(res);
     }
     catch (InvalidDataException ex)
     {
-        return Results.NotFound(ex.Message);
+        var problemDetails = new ProblemDetails {
+            Status = 403,
+            Title = "Forbidden",
+            Detail = ex.Message
+        };
+
+        return Results.Problem(problemDetails);
     }
 });
 
@@ -70,25 +99,6 @@ app.MapPost("/api/registration/user", (string name, string login, string passwor
         data.Name = name;
         data.password = password;
         
-        if (CheckData.checkCurrentNumberPhone(login) && CheckData.checkCurrentPassword(password))
-        {
-            if (CheckData.checkDublicatePersonDataNumberPhone(users, login))
-            {
-                var problem = new ProblemDetails {
-                    Status = 403,
-                    Title = "Forbidden",
-                    Detail = "данный номер телефона уже используется!"
-                };
-            
-                return Results.Problem(problem);
-            }
-                
-            data.loginNumber = login;
-            users.Add(data);
-            
-            response.Cookies.Append("personId", $"usr_{num}");
-            return Results.Text($"вы успешно создали аккаунт, {name}!");
-        }
         if (CheckData.checkCurrentEmailAddress(login) && CheckData.checkCurrentPassword(password))
         {
             if (CheckData.checkDublicatePersonDataEmailAddress(users, login))
@@ -105,20 +115,31 @@ app.MapPost("/api/registration/user", (string name, string login, string passwor
             data.loginEmail = login;
             users.Add(data);
             
-            response.Cookies.Append("personId", $"usr_{num}");
-            return Results.Text($"вы успешно создали аккаунт, {name}!");
+            var claims = new List<Claim> {new Claim(ClaimTypes.Name, login) };
+            // создаем JWT-токен
+            var jwt = new JwtSecurityToken(
+                issuer: AuthOptions.ISSUER,
+                audience: AuthOptions.AUDIENCE,
+                claims: claims,
+                expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
+                signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
+            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
+ 
+            // формируем ответ
+            var res = new
+            {
+                message = "Вы успешно создали аккаунт",
+                access_token = encodedJwt,
+                email = login
+            };
+
+            return Results.Json(res);
         }
 
-        var problemDetails = new ProblemDetails {
-            Status = 403,
-            Title = "Forbidden",
-            Detail = "логин или пароль не соответствует требованиям!"
-        };
-
-        return Results.Problem(problemDetails);
+        return Results.BadRequest(new { message = "логин или пароль не соответствует требованиям!" });
     }
 
-    return Results.Text("вы уже авторизованы!");
+    return Results.Ok(new { message = "вы уже авторизованы!" });
 });
 
 app.Run();
