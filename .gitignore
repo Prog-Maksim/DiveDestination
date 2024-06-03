@@ -4,3 +4,5 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .idea
+# Конфидициальные данные для JWT токена
+*/ConfigData/AuthOptions.cs
