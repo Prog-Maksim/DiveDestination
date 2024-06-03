@@ -2,29 +2,21 @@
 
 public class GetDataPerson
 {
-    public static List<string> getIdLoginPhoneNumber(List<PersonData> data, string login)
+    public static PersonData getIdLoginPhoneNumber(List<PersonData> data, string login)
     {
-        foreach (var personData in data)
-        {
-            if (personData.loginNumber == login)
-            {
-                return new List<string> {personData.Id, personData.password, personData.Name};
-            }
-        }
+        var user = data.FirstOrDefault(d => d.loginNumber == login);
+        if (user is  null)
+            throw new InvalidDataException("Пользователь под данным логином не найден!");
 
-        throw new InvalidDataException("Пользователь под данным логином не найден!");
+        return user;
     }
     
-    public static List<string> getIdLoginEmailAddress(List<PersonData> data, string login)
+    public static PersonData getIdLoginEmailAddress(List<PersonData> data, string login, string password)
     {
-        foreach (var personData in data)
-        {
-            if (personData.loginEmail == login)
-            {
-                return new List<string> {personData.Id, personData.password, personData.Name};
-            }
-        }
+        var user = data.FirstOrDefault(d => d.loginEmail == login && d.password == password);
+        if (user is null)
+            throw new InvalidDataException("Логин или пароль не верен!");
 
-        throw new InvalidDataException("Пользователь под данным логином не найден!");
+        return user;
     }
 }
