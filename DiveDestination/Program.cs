@@ -26,7 +26,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 var app = builder.Build();
-app.UseCors(builder => builder.WithOrigins("https://localhost:5173", "https://localhost:5174", "https://localhost:5175").AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+app.UseCors(builder => builder.WithOrigins("https://localhost:5173", "https://localhost:5174", "https://localhost:5175").AllowAnyHeader().WithMethods("GET", "POST").AllowCredentials());
 
 List<PersonData> users = new List<PersonData> 
 { 
@@ -38,55 +38,55 @@ List<PersonData> users = new List<PersonData>
 app.MapGet("/", () => "Welcome in Dive Destination");
 
 
-app.MapPost("/api/authorization/user", (string login, string password, HttpRequest request, HttpResponse response, ILogger<Program> logger) =>
+app.MapPost("/api/authorization/user", () =>
 {
-    logger.LogInformation($"вывзан endPoint для авторизации\n----------\nпереданные данные: \nлогин: {login} \nпароль:{password}");
-    try
-    {
-        PersonData result = new PersonData();
-        
-        if (CheckData.checkCurrentEmailAddress(login))
-            result = GetDataPerson.getIdLoginEmailAddress(users, login, password);
-        else
-        {
-            var problem = new ProblemDetails {
-                Status = 403,
-                Title = "Forbidden",
-                Detail = "Логин или пароль введен не корректно!"
-            };
-
-            return Results.Problem(problem);
-        }
-        
-        var claims = new List<Claim> {new Claim(ClaimTypes.Name, result.Name), new Claim(ClaimTypes.Email, result.loginEmail) };
-        // создаем JWT-токен
-        var jwt = new JwtSecurityToken(
-            issuer: AuthOptions.ISSUER,
-            audience: AuthOptions.AUDIENCE,
-            claims: claims,
-            expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
-            signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
-        var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
-        
-        var res = new
-        {
-            message = "вы успешно авторизовались",
-            access_token = encodedJwt,
-            email = result.loginEmail
-        };
-
-        return Results.Json(res);
-    }
-    catch (InvalidDataException ex)
-    {
-        var problemDetails = new ProblemDetails {
-            Status = 403,
-            Title = "Forbidden",
-            Detail = ex.Message
-        };
-
-        return Results.Problem(problemDetails);
-    }
+    // logger.LogInformation($"вывзан endPoint для авторизации\n----------\nпереданные данные: \nлогин: {login} \nпароль:{password}");
+    // try
+    // {
+    //     PersonData result = new PersonData();
+    //     
+    //     if (CheckData.checkCurrentEmailAddress(login))
+    //         result = GetDataPerson.getIdLoginEmailAddress(users, login, password);
+    //     else
+    //     {
+    //         var problem = new ProblemDetails {
+    //             Status = 403,
+    //             Title = "Forbidden",
+    //             Detail = "Логин или пароль введен не корректно!"
+    //         };
+    //
+    //         return Results.Problem(problem);
+    //     }
+    //     
+    //     var claims = new List<Claim> {new Claim(ClaimTypes.Name, result.Name), new Claim(ClaimTypes.Email, result.loginEmail) };
+    //     // создаем JWT-токен
+    //     var jwt = new JwtSecurityToken(
+    //         issuer: AuthOptions.ISSUER,
+    //         audience: AuthOptions.AUDIENCE,
+    //         claims: claims,
+    //         expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
+    //         signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
+    //     var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
+    //     
+    //     var res = new
+    //     {
+    //         message = "вы успешно авторизовались",
+    //         access_token = encodedJwt,
+    //         email = result.loginEmail
+    //     };
+    //
+    //     return Results.Json(res);
+    // }
+    // catch (InvalidDataException ex)
+    // {
+    //     var problemDetails = new ProblemDetails {
+    //         Status = 403,
+    //         Title = "Forbidden",
+    //         Detail = ex.Message
+    //     };
+    //
+    //     return Results.Problem(problemDetails);
+    // }
 });
 
 app.MapPost("/api/registration/user", (string name, string login, string password, HttpRequest request, HttpResponse response, ILogger<Program> logger) =>
