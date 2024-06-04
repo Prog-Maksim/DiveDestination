@@ -26,7 +26,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 
 var app = builder.Build();
-app.UseCors(builder => builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+app.UseCors(builder => builder.WithOrigins("https://localhost:5173", "https://localhost:5174", "https://localhost:5175").AllowAnyHeader().AllowAnyMethod().AllowCredentials());
 
 List<PersonData> users = new List<PersonData> 
 { 
