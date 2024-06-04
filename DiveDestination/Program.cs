@@ -24,6 +24,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateIssuerSigningKey = true
     };
 });
+
 var app = builder.Build();
 app.UseCors(builder => builder.AllowAnyOrigin());
 
