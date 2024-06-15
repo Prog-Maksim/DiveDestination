@@ -3,6 +3,9 @@ using System.Security.Claims;
 using DiveDestination.Scripts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Server_Test.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace DiveDestination.Controllers;
 
@@ -10,75 +13,88 @@ namespace DiveDestination.Controllers;
 [Route("api/registration")]
 public class RegistrationController: ControllerBase
 {
-    List<PersonData> users = new List<PersonData> { 
-        new() { Id = "usr_1", loginEmail = "Grigorieva@gmail.com",loginNumber = "81234567890", Name = "Григорьева", Age = 37, password = "asdgdhjt8@u4y5ved"},
-        new() { Id = "usr_2", loginEmail = "matvey_frontender@gmail.com", Name = "Матвей фронтендер", Age = 10, password = "asfaer67u5nktu("},
-        new() { Id = "usr_3", loginEmail = "maksim_bekender@gmail.com", loginNumber = "80987654321", Name = "Максим Бекендер", Age = 24, password = "b9s9573@(74tnv"}
-    };
-    
     private readonly ILogger<RegistrationController> _logger;
     private readonly ApplicationContext _context;
+    private readonly PasswordHasher<Persons> _passwordHasher;
 
     public RegistrationController(ILogger<RegistrationController> logger, ApplicationContext context)
     {
         _logger = logger;
         _context = context;
+        _passwordHasher = new PasswordHasher<Persons>();
     }
 
     [HttpPost("user")]
-    public IActionResult RegisterUser([FromForm] string name, [FromForm] string login, [FromForm] string password)
+    public async Task<IActionResult> RegisterUser([FromForm] string first_name, [FromForm] string last_name, [FromForm] string login, [FromForm] string password)
     {
-        _logger.LogInformation($"Вызван эндпоинт для регистрации \n----------\nпереданные данные: \nимя: {name} \nлогин: {login} \nпароль: {password}");
+        _logger.LogInformation($"Вызван эндпоинт для регистрации \n----------\nпереданные данные: \nимя: {first_name} \nлогин: {login} \nпароль: {password}");
     
-        if (!Request.Cookies.ContainsKey("personId"))
-        {
-            Random rnd = new Random();
-            PersonData data = new PersonData();
-            int num = rnd.Next(11111, 99999);
-            data.Id = $"usr_{num}";
-            data.Name = name;
-            data.password = password;
-        
-            if (CheckData.checkCurrentEmailAddress(login) && CheckData.checkCurrentPassword(password))
-            {
-                if (CheckData.checkDublicatePersonDataEmailAddress(users, login))
-                {
-                    var problem = new ProblemDetails {
-                        Status = 403,
-                        Title = "Forbidden",
-                        Detail = "данный почтовый адрес уже используется!"
-                    };
+        List<Persons> person = await _context.Persons.ToListAsync();
 
-                    return Problem(problem.Detail, null, problem.Status, problem.Title);
-                }
-            
-                data.loginEmail = login;
-                users.Add(data);
-            
-                var claims = new List<Claim> {new Claim(ClaimTypes.Name, login) };
-                // создаем JWT-токен
-                var jwt = new JwtSecurityToken(
-                    issuer: AuthOptions.ISSUER,
-                    audience: AuthOptions.AUDIENCE,
-                    claims: claims,
-                    expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
-                    signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
-                var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
- 
-                // формируем ответ
-                var res = new
-                {
-                    message = "Вы успешно создали аккаунт",
-                    access_token = encodedJwt,
-                    email = login
+        bool dubl_email = !person.GroupBy(p => p.email).Any(g => g.Count() > 1);
+    
+        if (CheckData.checkCurrentEmailAddress(login) && CheckData.checkCurrentPassword(password))
+        {
+            if (dubl_email)
+            {
+                var problem = new ProblemDetails {
+                    Status = 403,
+                    Title = "Forbidden",
+                    Detail = "данный почтовый адрес уже используется!"
                 };
 
-                return Ok(res);
+                return Problem(problem.Detail, null, problem.Status, problem.Title);
             }
+        
+            PassData pass = new PassData {
+                pass_num = 1234,
+                pass_seria = 567890,
+                pass_issued = "Гу МВД РОССИИ ПО РО",
+                pass_date_start = DateTime.Now
+            };
+            UserLevel level = new UserLevel
+            {
+                level = "пользователь"
+            };
+        
+            await _context.PassData.AddAsync(pass);
+            await _context.UserLevel.AddAsync(level);
+        
+            Persons user = new Persons {
+                last_name = first_name,
+                first_name = last_name,
+                patronymic = "",
+                age = 18,
+                email = login,
+                passport = 1,
+                image_path = "Images/user-default.png",
+                user_level = 1
+            };
+            user.password = _passwordHasher.HashPassword(user, password);
+        
+            await _context.Persons.AddAsync(user);
+            await _context.SaveChangesAsync();
+        
+            var claims = new List<Claim> { new(ClaimTypes.Name, login) };
 
-            return BadRequest(new { message = "логин или пароль не соответствует требованиям!" });
+            var jwt = new JwtSecurityToken(
+                issuer: AuthOptions.ISSUER,
+                audience: AuthOptions.AUDIENCE,
+                claims: claims,
+                expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
+                signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
+            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
+
+            var res = new
+            {
+                message = "Вы успешно создали аккаунт",
+                access_token = encodedJwt,
+                email = login
+            };
+
+            return Ok(res);
         }
 
-        return Ok(new { message = "вы уже авторизованы!" });
+        return BadRequest(new { message = "логин или пароль не соответствует требованиям!" });
     }
 }
