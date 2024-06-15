@@ -1,6 +1,5 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using DiveDestination.Scripts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Server_Test.Models;
@@ -11,11 +10,6 @@ namespace DiveDestination.Controllers;
 [Route("api/authorization")]
 public class AuthorizationController: ControllerBase
 {
-    List<PersonData> users = new List<PersonData> { 
-        new() { Id = "usr_1", loginEmail = "Grigorieva@gmail.com",loginNumber = "81234567890", Name = "Григорьева", Age = 37, password = "asdgdhjt8@u4y5ved"},
-        new() { Id = "usr_2", loginEmail = "matvey_frontender@gmail.com", Name = "Матвей фронтендер", Age = 10, password = "asfaer67u5nktu("},
-        new() { Id = "usr_3", loginEmail = "maksim_bekender@gmail.com", loginNumber = "80987654321", Name = "Максим Бекендер", Age = 24, password = "b9s9573@(74tnv"}
-    };
     private readonly ILogger<AuthorizationController> _logger;
     private readonly ApplicationContext _context;
 
@@ -33,11 +27,7 @@ public class AuthorizationController: ControllerBase
         {
             Persons? person = _context.Persons.FirstOrDefault(p => p.email == login && p.password == password);
             
-            PersonData result = new PersonData();
-        
-            if (CheckData.checkCurrentEmailAddress(login))
-                result = GetDataPerson.getIdLoginEmailAddress(users, login, password);
-            else
+            if (person == null)
             {
                 var problem = new ProblemDetails {
                     Status = 403,
@@ -48,8 +38,8 @@ public class AuthorizationController: ControllerBase
                 return Problem(problem.Detail, null, problem.Status, problem.Title);
             }
         
-            var claims = new List<Claim> {new Claim(ClaimTypes.Name, result.Name), new Claim(ClaimTypes.Email, result.loginEmail) };
-            // создаем JWT-токен
+            var claims = new List<Claim> {new Claim(ClaimTypes.Name, person.first_name), new Claim(ClaimTypes.Email, person.email) };
+            
             var jwt = new JwtSecurityToken(
                 issuer: AuthOptions.ISSUER,
                 audience: AuthOptions.AUDIENCE,
@@ -62,7 +52,7 @@ public class AuthorizationController: ControllerBase
             {
                 message = "вы успешно авторизовались",
                 access_token = encodedJwt,
-                email = result.loginEmail
+                email = person.email
             };
 
             return Ok(res);
