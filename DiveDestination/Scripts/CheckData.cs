@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics;
+using System.Security.Policy;
+using System.Text.RegularExpressions;
 
 namespace DiveDestination.Scripts;
 
@@ -23,31 +25,5 @@ public class CheckData
         string passwordPattern = @"^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@$%^&*()\-+<>?])[A-Za-z\d!@$%^&*()\-+<>?]{15,}$";
         bool isValidPassword = Regex.IsMatch(password, passwordPattern);
         return isValidPassword;
-    }
-
-    public static bool checkDublicatePersonDataNumberPhone(List<PersonData> data, string login)
-    {
-        foreach (PersonData personData in data)
-        {
-            if (personData.loginNumber == login)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-    
-    public static bool checkDublicatePersonDataEmailAddress(List<PersonData> data, string login)
-    {
-        foreach (PersonData personData in data)
-        {
-            if (personData.loginEmail == login)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }
