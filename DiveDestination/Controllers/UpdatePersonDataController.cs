@@ -60,6 +60,51 @@ public class UpdatePersonDataController(ILogger<AuthorizationController> logger,
     }
 
     [Authorize]
+    [HttpPut("photo-account")]
+    public async Task<IActionResult> PhotoUser(IFormFile file)
+    {
+        var emailClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
+        var email = emailClaim?.Value;
+
+        var person = await context.Persons.SingleOrDefaultAsync(p => p.email == email);
+        
+        if (person == null)
+        {
+            var problem = new ProblemDetails {
+                Status = 404,
+                Title = "Not Found",
+                Detail = "Данный пользователь не найден!"
+            };
+
+            return Problem(problem.Detail, null, problem.Status, problem.Title);
+        }
+        
+        var allowedExtensions = new[] { ".png", ".svg", ".jpg", ".jpeg" };
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+        if (!allowedExtensions.Contains(extension))
+        {
+            var errorResponse = new { message = "Недопустимый тип файла. Разрешенные типы: png, svg, jpg, jpeg." };
+            return BadRequest(errorResponse);
+        }
+        
+        var uploadPath = $"{Directory.GetCurrentDirectory()}/ProfileImage";
+        
+        string fullPath = $"{uploadPath}/{Path.GetRandomFileName()}{extension}";
+        
+        using (var fileStream = new FileStream(fullPath, FileMode.Create))
+        {
+            await file.CopyToAsync(fileStream);
+        }
+
+        person.image_path = fullPath;
+        await context.SaveChangesAsync();
+        
+        var res = new { message = "фотография профиля успешно обновлена" };
+        return Ok(res);
+    }
+
+    [Authorize]
     [HttpDelete("delete-account")]
     public async Task<IActionResult> DeleteUser([FromForm] string password)
     {
