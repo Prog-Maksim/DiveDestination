@@ -19,15 +19,22 @@ public class ApplicationContext: DbContext
         // Настройка связи один-к-одному для PassData
         modelBuilder.Entity<Persons>()
             .HasOne(p => p.PassData)
-            .WithOne(d => d.Person)
+            .WithOne(d => d.Persons)
             .HasForeignKey<Persons>(p => p.passport)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Настройка связи один-ко-многим для UserLevel
+        // Настройка связи один-к-одному для UserLevel
         modelBuilder.Entity<Persons>()
             .HasOne(p => p.UserLevel)
             .WithOne(u => u.Person)
             .HasForeignKey<Persons>(p => p.user_level)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        // Настройка связи один-к-одному для UserLevel
+        modelBuilder.Entity<UserLevel>()
+            .HasOne(p => p.Roles)
+            .WithOne(u => u.UserLevel)
+            .HasForeignKey<UserLevel>(p => p.level)
             .OnDelete(DeleteBehavior.Cascade);
 
         base.OnModelCreating(modelBuilder);
