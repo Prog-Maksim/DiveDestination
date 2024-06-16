@@ -10,25 +10,16 @@ namespace DiveDestination.Controllers;
 
 [ApiController]
 [Route("api/authorization")]
-public class AuthorizationController: ControllerBase
+public class AuthorizationController(ILogger<AuthorizationController> logger, ApplicationContext context): ControllerBase
 {
-    private readonly ILogger<AuthorizationController> _logger;
-    private readonly ApplicationContext _context;
-    private readonly PasswordHasher<Persons> _passwordHasher;
-
-    public AuthorizationController(ILogger<AuthorizationController> logger, ApplicationContext context)
-    {
-        _logger = logger;
-        _context = context;
-        _passwordHasher = new PasswordHasher<Persons>();
-    }
+    private readonly PasswordHasher<Persons> _passwordHasher = new();
 
     [HttpPost("user")]
     public async Task<IActionResult> AuthorizeUser([FromForm] string login, [FromForm] string password)
     {
-        _logger.LogInformation($"Вызван эндпоинт для авторизации\n----------\nпереданные данные: \nлогин: {login} \nпароль:{password}");
+        logger.LogInformation($"Вызван эндпоинт для авторизации\n----------\nпереданные данные: \nлогин: {login} \nпароль:{password}");
 
-        var person = await _context.Persons.FirstOrDefaultAsync(p => p.email == login);
+        var person = await context.Persons.FirstOrDefaultAsync(p => p.email == login);
 
         if (person != null)
         {
@@ -36,7 +27,7 @@ public class AuthorizationController: ControllerBase
 
             if (result == PasswordVerificationResult.Success)
             {
-                var claims = new List<Claim> { new(ClaimTypes.Name, person.first_name), new(ClaimTypes.Email, person.email) };
+                var claims = new List<Claim> { new(ClaimTypes.Email, person.email) };
             
                 var jwt = new JwtSecurityToken(
                     issuer: AuthOptions.ISSUER,
@@ -49,8 +40,7 @@ public class AuthorizationController: ControllerBase
                 var res = new
                 {
                     message = "вы успешно авторизовались",
-                    access_token = encodedJwt,
-                    email = person.email
+                    access_token = encodedJwt
                 };
 
                 return Ok(res);
