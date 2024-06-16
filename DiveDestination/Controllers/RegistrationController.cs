@@ -11,31 +11,18 @@ namespace DiveDestination.Controllers;
 
 [ApiController]
 [Route("api/registration")]
-public class RegistrationController: ControllerBase
+public class RegistrationController(ILogger<RegistrationController> logger, ApplicationContext context): ControllerBase
 {
-    private readonly ILogger<RegistrationController> _logger;
-    private readonly ApplicationContext _context;
-    private readonly PasswordHasher<Persons> _passwordHasher;
-
-    public RegistrationController(ILogger<RegistrationController> logger, ApplicationContext context)
-    {
-        _logger = logger;
-        _context = context;
-        _passwordHasher = new PasswordHasher<Persons>();
-    }
+    private readonly PasswordHasher<Persons> _passwordHasher = new();
 
     [HttpPost("user")]
-    public async Task<IActionResult> RegisterUser([FromForm] string first_name, [FromForm] string last_name, [FromForm] string login, [FromForm] string password)
+    public async Task<IActionResult> RegisterUser([FromForm] string firstName, [FromForm] string lastName, [FromForm] string login, [FromForm] string password)
     {
-        _logger.LogInformation($"Вызван эндпоинт для регистрации \n----------\nпереданные данные: \nимя: {first_name} \nлогин: {login} \nпароль: {password}");
-    
-        List<Persons> person = await _context.Persons.ToListAsync();
-
-        bool dubl_email = !person.GroupBy(p => p.email).Any(g => g.Count() > 1);
+        var personWithEmail = await context.Persons.SingleOrDefaultAsync(p => p.email == login);
     
         if (CheckData.checkCurrentEmailAddress(login) && CheckData.checkCurrentPassword(password))
         {
-            if (dubl_email)
+            if (personWithEmail != null)
             {
                 var problem = new ProblemDetails {
                     Status = 403,
@@ -46,37 +33,28 @@ public class RegistrationController: ControllerBase
                 return Problem(problem.Detail, null, problem.Status, problem.Title);
             }
         
-            PassData pass = new PassData {
-                pass_num = 1234,
-                pass_seria = 567890,
-                pass_issued = "Гу МВД РОССИИ ПО РО",
-                pass_date_start = DateTime.Now
-            };
-            UserLevel level = new UserLevel
+            PassData pass = new PassData();
+            UserLevel level = new UserLevel{ level = "пользователь" };
+
+            await context.PassData.AddAsync(pass);
+            await context.UserLevel.AddAsync(level);
+            await context.SaveChangesAsync();
+
+            Persons user = new Persons
             {
-                level = "пользователь"
-            };
-        
-            await _context.PassData.AddAsync(pass);
-            await _context.UserLevel.AddAsync(level);
-        
-            Persons user = new Persons {
-                last_name = first_name,
-                first_name = last_name,
-                patronymic = "",
-                age = 18,
+                last_name = firstName,
+                first_name = lastName,
                 email = login,
-                passport = 1,
-                image_path = "Images/user-default.png",
-                user_level = 1
+                passport = pass.id,
+                user_level = level.id,
+                image_path = "Images/user-default.png"
             };
             user.password = _passwordHasher.HashPassword(user, password);
-        
-            await _context.Persons.AddAsync(user);
-            await _context.SaveChangesAsync();
-        
-            var claims = new List<Claim> { new(ClaimTypes.Name, login) };
 
+            await context.Persons.AddAsync(user);
+            await context.SaveChangesAsync();
+            
+            var claims = new List<Claim> { new(ClaimTypes.Email, login) };
             var jwt = new JwtSecurityToken(
                 issuer: AuthOptions.ISSUER,
                 audience: AuthOptions.AUDIENCE,
@@ -88,8 +66,7 @@ public class RegistrationController: ControllerBase
             var res = new
             {
                 message = "Вы успешно создали аккаунт",
-                access_token = encodedJwt,
-                email = login
+                access_token = encodedJwt
             };
 
             return Ok(res);
