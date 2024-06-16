@@ -47,7 +47,7 @@ public class RegistrationController(ILogger<RegistrationController> logger, Appl
                 email = login,
                 passport = pass.id,
                 user_level = level.id,
-                image_path = "Images/user-default.png"
+                image_path = $"{Directory.GetCurrentDirectory()}/ProfileImage/user-default.png"
             };
             user.password = _passwordHasher.HashPassword(user, password);
 
