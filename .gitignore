@@ -7,5 +7,4 @@ riderModule.iml
 # Конфидициальные данные для JWT токена
 */ConfigData/AuthOptions.cs
 */appsettings.json
-../appsettings.json
-appsettings.json
+*/ProfileImage
