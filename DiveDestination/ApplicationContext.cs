@@ -16,6 +16,20 @@ public class ApplicationContext: DbContext
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        
+        // Настройка связи один-к-одному для PassData
+        modelBuilder.Entity<Persons>()
+            .HasOne(p => p.PassData)
+            .WithOne(d => d.Person)
+            .HasForeignKey<Persons>(p => p.passport)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Настройка связи один-ко-многим для UserLevel
+        modelBuilder.Entity<Persons>()
+            .HasOne(p => p.UserLevel)
+            .WithOne(u => u.Person)
+            .HasForeignKey<Persons>(p => p.user_level)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        base.OnModelCreating(modelBuilder);
     }
 }
