@@ -6,7 +6,7 @@ public class Persons
     public string last_name { get; set; }
     public string first_name { get; set; }
     public string? patronymic { get; set; } = "";
-    public DateTime age { get; set; }
+    public DateTime? age { get; set; }
     public int passport { get; set; }
     public string image_path { get; set; }
     public string email { get; set; }
