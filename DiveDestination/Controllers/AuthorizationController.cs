@@ -23,6 +23,17 @@ public class AuthorizationController(ILogger<AuthorizationController> logger, Ap
 
         if (person != null)
         {
+            if (person.status == false)
+            {
+                var problems = new ProblemDetails {
+                    Status = 403,
+                    Title = "Forbidden",
+                    Detail = "Данный пользователь заблокирован!"
+                };
+
+                return Problem(problems.Detail, null, problems.Status, problems.Title);
+            }
+            
             var result = _passwordHasher.VerifyHashedPassword(person, person.password, password);
 
             if (result == PasswordVerificationResult.Success)
@@ -33,7 +44,7 @@ public class AuthorizationController(ILogger<AuthorizationController> logger, Ap
                     issuer: AuthOptions.ISSUER,
                     audience: AuthOptions.AUDIENCE,
                     claims: claims,
-                    expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
+                    expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(5)),
                     signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
                 var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
         

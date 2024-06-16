@@ -59,7 +59,7 @@ public class RegistrationController(ILogger<RegistrationController> logger, Appl
                 issuer: AuthOptions.ISSUER,
                 audience: AuthOptions.AUDIENCE,
                 claims: claims,
-                expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(30)),
+                expires: DateTime.UtcNow.Add(TimeSpan.FromMinutes(5)),
                 signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
             var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
 
