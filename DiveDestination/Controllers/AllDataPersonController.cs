@@ -32,13 +32,25 @@ public class AllDataPersonController(ILogger<RegistrationController> logger, App
 
             return Problem(problem.Detail, null, problem.Status, problem.Title);
         }
+
+        string years = null;
+        if (person.age != null)
+        {
+            TimeSpan? timeDifference = DateTime.Now - person.age;
+            if (timeDifference.HasValue)
+            {
+                double totalYears = timeDifference.Value.TotalDays / 365.24219878;
+                years = ((int)Math.Floor(totalYears)).ToString();
+            }
+        }
+        
         var res = new
         {
             message = "успешно",
             first_name = person.first_name,
             last_name = person.last_name,
             patronymic = person.patronymic,
-            age = person.age,
+            age = years,
             email = person.email,
             numberphone = person.numberphone,
             status = person.status
@@ -90,5 +102,29 @@ public class AllDataPersonController(ILogger<RegistrationController> logger, App
         };
 
         return Problem(problemDetails.Detail, null, problemDetails.Status, problemDetails.Title);
+    }
+    
+    [Authorize]
+    [HttpGet("get-image-profile")]
+    public async Task<IActionResult> ImageProfileUser()
+    {
+        var emailClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
+        var email = emailClaim?.Value;
+
+        var person = await context.Persons.SingleOrDefaultAsync(p => p.email == email);
+        
+        if (person == null)
+        {
+            var problem = new ProblemDetails {
+                Status = 404,
+                Title = "Not Found",
+                Detail = "Данный пользователь не найден!"
+            };
+
+            return Problem(problem.Detail, null, problem.Status, problem.Title);
+        }
+        
+        await Response.SendFileAsync(person.image_path);
+        return new EmptyResult();
     }
 }
