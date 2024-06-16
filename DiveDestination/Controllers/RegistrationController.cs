@@ -34,7 +34,7 @@ public class RegistrationController(ILogger<RegistrationController> logger, Appl
             }
         
             PassData pass = new PassData();
-            UserLevel level = new UserLevel{ level = "пользователь" };
+            UserLevel level = new UserLevel();
 
             await context.PassData.AddAsync(pass);
             await context.UserLevel.AddAsync(level);
