@@ -12,6 +12,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Подключаем JWT токен
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -26,11 +27,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 
-string connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Подключает БД
+string? connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
+// Добавляем CORS
 var app = builder.Build();
-app.UseCors(builder => builder.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:5175").AllowAnyHeader().WithMethods("GET", "POST").AllowCredentials());
+app.UseCors(policyBuilder => policyBuilder.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:5175").AllowAnyHeader().WithMethods("GET", "POST").AllowCredentials());
+
 
 if (app.Environment.IsDevelopment())
 {
