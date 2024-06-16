@@ -5,7 +5,7 @@ public class Persons
     public int id { get; set; }
     public string last_name { get; set; }
     public string first_name { get; set; }
-    public string patronymic { get; set; }
+    public string? patronymic { get; set; } = "";
     public int age { get; set; }
     public int passport { get; set; }
     public string image_path { get; set; }
@@ -16,4 +16,7 @@ public class Persons
     public int user_level { get; set; }
     public string location { get; set; } = "";
     public string password { get; set; }
+    
+    public PassData PassData { get; set; }
+    public UserLevel UserLevel { get; set; }
 }
